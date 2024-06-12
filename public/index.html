@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+</head>
+<body>
+<h1>Register</h1>
+<form id="registerForm">
+    <input type="text" id="username" placeholder="Username" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <button type="submit">Register</button>
+</form>
+
+<h1>Login</h1>
+<form id="loginForm">
+    <input type="text" id="loginUsername" placeholder="Username" required>
+    <input type="password" id="loginPassword" placeholder="Password" required>
+    <button type="submit">Login</button>
+</form>
+
+<script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        try {
+            console.log('Sending registration request:', { username, password }); // Лог для диагностики
+            const res = await fetch('/api/users/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                console.log('Registration successful:', data); // Лог для диагностики
+                localStorage.setItem('token', data.token);
+                window.location.href = '/chat.html';
+            } else {
+                console.error('Registration error:', data.msg); // Лог для диагностики
+                alert(data.msg);
+            }
+        } catch (err) {
+            console.error('Error during registration:', err);
+            alert('An error occurred during registration.');
+        }
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        try {
+            console.log('Sending login request:', { username, password }); // Лог для диагностики
+            const res = await fetch('/api/users/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                console.log('Login successful:', data); // Лог для диагностики
+                localStorage.setItem('token', data.token);
+                window.location.href = '/chat.html';
+            } else {
+                console.error('Login error:', data.msg); // Лог для диагностики
+                alert(data.msg);
+            }
+        } catch (err) {
+            console.error('Error during login:', err);
+            alert('An error occurred during login.');
+        }
+    });
+</script>
+</body>
+</html>
