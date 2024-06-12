@@ -18,6 +18,8 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/api/users', userRouter);
 
+let onlineUsers = {};
+
 io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) {
@@ -33,14 +35,16 @@ io.use((socket, next) => {
 });
 
 io.on('connection', async socket => {
-    console.log('New WebSocket connection');
-
     const user = await User.findById(socket.userId);
     if (!user) {
         return socket.disconnect();
     }
 
     socket.username = user.username;
+    onlineUsers[socket.userId] = user.username;
+
+    // Notify all clients that a new user has connected
+    io.emit('userOnline', onlineUsers);
 
     // Load last 10 messages from database
     const messages = await Message.find().sort({ _id: -1 }).limit(10).exec();
@@ -54,7 +58,17 @@ io.on('connection', async socket => {
         io.emit('message', { username: socket.username, message, time });
     });
 
+    socket.on('typing', () => {
+        socket.broadcast.emit('typing', { username: socket.username });
+    });
+
+    socket.on('stopTyping', () => {
+        socket.broadcast.emit('stopTyping', { username: socket.username });
+    });
+
     socket.on('disconnect', () => {
+        delete onlineUsers[socket.userId];
+        io.emit('userOffline', socket.userId);
         console.log('User has left');
     });
 });

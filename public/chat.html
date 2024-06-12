@@ -4,15 +4,106 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Room</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #chat-container {
+            width: 60%;
+            max-width: 800px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #chat-header {
+            background: #007BFF;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+        }
+        #chat-content {
+            display: flex;
+            height: 500px;
+        }
+        #onlineUsers {
+            width: 25%;
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #e9ecef;
+            overflow-y: auto;
+        }
+        #onlineUsers h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        #onlineUsers div {
+            margin-bottom: 5px;
+        }
+        #messages-container {
+            width: 75%;
+            display: flex;
+            flex-direction: column;
+        }
+        #messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        #typing {
+            padding: 0 20px;
+            color: #888;
+        }
+        #messageForm {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        #messageForm input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        #messageForm button {
+            padding: 10px 20px;
+            border: none;
+            background: #007BFF;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #messageForm button:hover {
+            background: #0056b3;
+        }
+    </style>
 </head>
 <body>
-<h1>Chat Room</h1>
-<div id="chat">
-    <div id="messages"></div>
-    <form id="messageForm">
-        <input type="text" id="message" placeholder="Message" required>
-        <button type="submit">Send</button>
-    </form>
+<div id="chat-container">
+    <div id="chat-header">Chat Room</div>
+    <div id="chat-content">
+        <div id="onlineUsers">
+            <h2>Online Users:</h2>
+            <div id="onlineUsersList"></div>
+        </div>
+        <div id="messages-container">
+            <div id="messages"></div>
+            <div id="typing"></div>
+            <form id="messageForm">
+                <input type="text" id="message" placeholder="Type your message here..." required>
+                <button type="submit">Send</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -24,11 +115,22 @@
         }
     });
 
+    let typingTimeout;
+
+    document.getElementById('message').addEventListener('input', () => {
+        socket.emit('typing');
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            socket.emit('stopTyping');
+        }, 3000);
+    });
+
     document.getElementById('messageForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const message = document.getElementById('message').value;
         socket.emit('sendMessage', message);
         document.getElementById('message').value = '';
+        socket.emit('stopTyping');
     });
 
     socket.on('loadMessages', (messages) => {
@@ -44,6 +146,34 @@
         const div = document.createElement('div');
         div.textContent = `[${time}] ${username}: ${message}`;
         document.getElementById('messages').appendChild(div);
+    });
+
+    socket.on('typing', ({ username }) => {
+        const typingDiv = document.getElementById('typing');
+        typingDiv.textContent = `${username} is typing...`;
+    });
+
+    socket.on('stopTyping', ({ username }) => {
+        const typingDiv = document.getElementById('typing');
+        typingDiv.textContent = '';
+    });
+
+    socket.on('userOnline', (onlineUsers) => {
+        const onlineUsersDiv = document.getElementById('onlineUsersList');
+        onlineUsersDiv.innerHTML = '';
+        for (const userId in onlineUsers) {
+            const div = document.createElement('div');
+            div.id = `user-${userId}`;
+            div.textContent = onlineUsers[userId];
+            onlineUsersDiv.appendChild(div);
+        }
+    });
+
+    socket.on('userOffline', (userId) => {
+        const userDiv = document.getElementById(`user-${userId}`);
+        if (userDiv) {
+            userDiv.remove();
+        }
     });
 </script>
 </body>
